@@ -3,6 +3,8 @@ from fastapi import FastAPI, File, UploadFile
 from fastapi.responses import JSONResponse
 from io import BytesIO
 import os
+from utils import extract_pdf
+from utils import align_text, align_image
 
 app = FastAPI()
 
@@ -61,3 +63,31 @@ def summarize(text: str):
         return {"summary": summary}
     except Exception as e:
         return JSONResponse(status_code=400, content={"message": f"An error occurred: {e}"})
+    
+
+@app.post("/align-slides")
+async def align(transcript: str, slides: UploadFile = File(...)):
+    try:
+        # Save the uploaded slides file to a directory (e.g., './uploaded_files/')
+        file_location = f"./uploaded_files/{slides.filename}"
+        with open(file_location, "wb") as buffer:
+            buffer.write(await slides.read())
+
+        data = extract_pdf(file_location)
+
+        response = []
+        for i, content_dict in enumerate(data):
+            if content_dict["type"] == "text":
+                alignment = align_text(transcript, content_dict["content"], client=client)
+
+            elif content_dict["type"] == "image":
+                alignment = align_image(transcript, content_dict["content"], api_key=api_key)
+
+            response.append({"slide_number": i+1, "content": alignment})
+
+        return response
+    except Exception as e:
+        return JSONResponse(status_code=400, content={"message": f"An error occurred: {e}"})
+    
+    finally:
+        os.remove(file_location)
