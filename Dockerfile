@@ -7,4 +7,5 @@ RUN pip install -r requirements.txt
 EXPOSE 5000
 COPY ./main.py /code/
 COPY ./utils.py /code/
+RUN mkdir -p /code/uploaded_files
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "5000"]
