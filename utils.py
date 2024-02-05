@@ -2,6 +2,10 @@ import base64
 import requests
 import fitz
 from openai import OpenAI
+import tiktoken
+
+
+encoding = tiktoken.encoding_for_model('gpt-4')
 
 
 #### FUNCTIONS TO ALIGN CONTENT
@@ -77,3 +81,29 @@ def extract_pdf(file_location: str):
             pages.append({"type": "image", "content": page2bytes(page)})
 
     return pages
+
+
+### TRANSCRIPT FUNCTIONS
+
+def split_transcript(transcript: str, n_chunks: int):
+    # Split the transcript into n_chunks (overlapping by 50%)
+    tokens = encoding.encode(transcript)
+
+    chunk_size = len(tokens) // n_chunks
+
+    chunks = []
+
+    for i in range(n_chunks):
+        start = max(0, (i-1)*chunk_size)
+        end = min((i+2)*chunk_size, len(tokens))
+        chunks.append(encoding.decode(tokens[start:end]))
+    
+    return chunks
+
+
+### TIKTOKEN FUNCTIONS
+
+def count_tokens(text: str):
+    n_tokens = len(encoding.encode(text))
+    return n_tokens
+
