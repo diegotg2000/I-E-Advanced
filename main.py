@@ -5,6 +5,8 @@ from io import BytesIO
 import os
 from utils import extract_pdf
 from utils import align_text, align_image
+from utils import count_tokens
+from utils import split_transcript
 
 app = FastAPI()
 
@@ -75,13 +77,16 @@ async def align(transcript: str, slides: UploadFile = File(...)):
 
         data = extract_pdf(file_location)
 
+        transcript_list = split_transcript(transcript, n_chunks=len(data))
+
         response = []
-        for i, content_dict in enumerate(data):
+
+        for i, (content_dict, slide_transcript) in enumerate(zip(data, transcript_list)):
             if content_dict["type"] == "text":
-                alignment = align_text(transcript, content_dict["content"], client=client)
+                alignment = align_text(slide_transcript, content_dict["content"], client=client)
 
             elif content_dict["type"] == "image":
-                alignment = align_image(transcript, content_dict["content"], api_key=api_key)
+                alignment = align_image(slide_transcript, content_dict["content"], api_key=api_key)
 
             response.append({"slide_number": i+1, "content": alignment})
 
