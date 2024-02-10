@@ -12,7 +12,7 @@ encoding = tiktoken.encoding_for_model('gpt-4')
 
 def align_text(transcript: str, text: str, *, client: OpenAI):
     MODEL = "gpt-3.5-turbo"
-    SYSTEM_PROMPT = "You are a helpful assistant. The user will give you the content of a slide, and the transcription of a lecture concerning the slide. Please extract the information of the transcription that is relevant for that slide. Only output a bullet point list."
+    SYSTEM_PROMPT = "You are a helpful assistant. The user will give you the content of a slide, and the transcription of a lecture concerning the slide. Please extract the information of the transcription that is relevant for that slide. Beware of not repeating information that is in the slide, the central goal is to add new information, the slide description is only there so you know what to extract from the transcription. If you think there isn't much to add, simply output an empty string. Otherwise, output a bullet point list and do not add any extra remarks."
 
     data_str = f"Slides Content:\n{text}\nTranscription:\n{transcript}"
 
@@ -30,7 +30,7 @@ def align_text(transcript: str, text: str, *, client: OpenAI):
 
 def align_image(transcript: str, image: str, *, api_key: str):
     MODEL = "gpt-4-vision-preview"
-    SYSTEM_PROMPT = "You are a helpful assistant. The user will give you the image of a slide as base64, and the transcription of a lecture concerning the slide. Please extract the information of the transcription that is relevant for that slide. Only output a bullet point list, do not add any extra remarks."
+    SYSTEM_PROMPT = "You are a helpful assistant. The user will give you the image of a slide as base64, and the transcription of a lecture concerning the slide. Please extract the information of the transcription that is relevant for that slide. Beware of not repeating information that is in the slide, the central goal is to add new information, the slide description is only there so you know what to extract from the transcription. If you think there isn't much to add, simply output an empty string. Otherwise, output a bullet point list and do not add any extra remarks."
 
     headers = {"Content-Type": "application/json", "Authorization": f"Bearer {api_key}"}
 
