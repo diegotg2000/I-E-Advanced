@@ -89,13 +89,16 @@ def split_transcript(transcript: str, n_chunks: int):
     # Split the transcript into n_chunks (overlapping by 50%)
     tokens = encoding.encode(transcript)
 
-    chunk_size = len(tokens) // n_chunks
+    hop_size = len(tokens) // n_chunks
+
+    chunk_size = min(3*hop_size, 3500)
 
     chunks = []
 
     for i in range(n_chunks):
-        start = max(0, (i-1)*chunk_size)
-        end = min((i+2)*chunk_size, len(tokens))
+        chunk_center = (i+1/2)*hop_size
+        start = max(0, int(chunk_center - chunk_size/2))
+        end = min(int(chunk_center + chunk_size/2), len(tokens))
         chunks.append(encoding.decode(tokens[start:end]))
     
     return chunks
