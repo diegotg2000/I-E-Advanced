@@ -76,7 +76,11 @@ def extract_pdf(file_location: str):
     for page in slides_file:
         text = page.get_text("text")
         if len(text) > 20:
-            pages.append({"type": "text", "content": text})
+            if count_tokens(text) < 500:
+                pages.append({"type": "text", "content": text})
+            else:
+                pages.append({"type": "image", "content": page2bytes(page)})
+
         else:
             pages.append({"type": "image", "content": page2bytes(page)})
 
@@ -86,12 +90,12 @@ def extract_pdf(file_location: str):
 ### TRANSCRIPT FUNCTIONS
 
 def split_transcript(transcript: str, n_chunks: int):
-    # Split the transcript into n_chunks (overlapping by 50%)
+    # Split the transcript into n_chunks
     tokens = encoding.encode(transcript)
 
     hop_size = len(tokens) // n_chunks
 
-    chunk_size = min(3*hop_size, 3500)
+    chunk_size = min(3*hop_size, 3000)
 
     chunks = []
 
