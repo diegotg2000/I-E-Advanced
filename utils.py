@@ -1,9 +1,12 @@
 import base64
-import requests
-import fitz
-from openai import OpenAI
-import tiktoken
+import io
+import textwrap
 
+import fitz
+import requests
+import tiktoken
+from openai import OpenAI
+from PIL import Image, ImageDraw, ImageFont
 
 encoding = tiktoken.encoding_for_model('gpt-4')
 
@@ -85,6 +88,63 @@ def extract_pdf(file_location: str):
             pages.append({"type": "image", "content": page2bytes(page)})
 
     return pages
+
+
+### PDF EDITING FUNCTIONS
+
+def add_text_to_pdf_and_save(pdf_path, output_pdf_path, text_list, font_size=12):
+    doc = fitz.open(pdf_path)
+    new_images = []
+
+    for page, text_data in zip(doc, text_list):
+        img = process_page_and_add_text(page, text_data['content'], font_size)
+        new_images.append(img)
+    
+    # Save the first image as PDF and append the rest
+    new_images[0].save(output_pdf_path, "PDF", resolution=100.0, save_all=True, append_images=new_images[1:])
+
+
+def process_page_and_add_text(page, text, font_size=12, max_width=None):
+    # Convert fitz.Page to fitz.Pixmap, then to PIL Image
+    pix = page.get_pixmap() 
+    img_bytes = pix.tobytes("png")  # Get PNG bytes
+    img = Image.open(io.BytesIO(img_bytes))
+
+    if len(text) == 0:
+        return img
+    
+    # Expand the image by adding white space to the right
+    width, height = img.size
+    new_width = width * 1.4  # Adjust the factor as needed
+    new_img = Image.new("RGB", (int(new_width), height), "white")
+    new_img.paste(img, (0, 0))
+    
+    # Prepare to add text to the new white space
+    draw = ImageDraw.Draw(new_img)
+    font = ImageFont.load_default()  # or ImageFont.truetype(font_path, font_size) for custom fonts
+    
+    # Determine the available width for text
+    if max_width is None:
+        max_width = new_width - width - 40  # Adjust padding as needed
+    
+    # Split text into lines
+    char_size = draw.textlength(text.replace('\n',''), font=font)/len(text)
+    max_char = int(max_width / (char_size * 0.9))  # Adjust the factor as needed
+    lines = textwrap.wrap(text, width=max_char)  # Adjust width for your needs or dynamically based on max_width and font size
+
+    # Calculate the starting Y position
+    text_y = (height - (len(lines) * font_size)) / 2  # Centered vertically
+    
+    # Draw each line of text
+    for line in lines:
+        text_left, text_top, text_right, text_bottom = draw.textbbox((0,0), line, font=font)
+        text_width = text_right - text_left
+        text_height = text_bottom - text_top
+        text_x = width + (new_width - width - text_width) / 2
+        draw.text((text_x, text_y), line, fill="black", font=font)
+        text_y += text_height  # Move down to draw the next line
+
+    return new_img
 
 
 ### TRANSCRIPT FUNCTIONS
