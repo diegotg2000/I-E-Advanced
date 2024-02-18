@@ -7,6 +7,7 @@ from utils import extract_pdf
 from utils import align_text, align_image
 from utils import count_tokens
 from utils import split_transcript
+from utils import get_summary
 
 app = FastAPI()
 
@@ -46,22 +47,8 @@ def process_audio(audio: UploadFile = File(...)):
 
 @app.post("/summarize")
 def summarize(text: str):
-    MODEL = "gpt-3.5-turbo"
     try:
-        response = client.chat.completions.create(
-            model=MODEL,
-            messages=[
-                {
-                    "role": "system", 
-                    "content": "You are a helpful assistant. Your role is to summarize the transcription of a lecture. Do not say hello or anything, just provide the answer."},
-                {
-                    "role": "user", 
-                    "content": text
-                }
-            ],
-            temperature=0,
-        )
-        summary = response.choices[0].message.content
+        summary = get_summary(text, client=client)
         return {"summary": summary}
     except Exception as e:
         return JSONResponse(status_code=400, content={"message": f"An error occurred: {e}"})
@@ -77,18 +64,25 @@ async def align(transcript: str, slides: UploadFile = File(...)):
 
         data = extract_pdf(file_location)
 
+        summary = get_summary(transcript, client=client)
+
         transcript_list = split_transcript(transcript, n_chunks=len(data))
 
         response = []
 
         for i, (content_dict, slide_transcript) in enumerate(zip(data, transcript_list)):
+            previous_info = "\n".join([d['content'] for d in response[-3:]])
+
             if content_dict["type"] == "text":
-                alignment = align_text(slide_transcript, content_dict["content"], client=client)
+                alignment = align_text(slide_transcript, summary, previous_info, content_dict["content"], client=client)
 
             elif content_dict["type"] == "image":
-                alignment = align_image(slide_transcript, content_dict["content"], api_key=api_key)
+                alignment = align_image(slide_transcript, summary, previous_info, content_dict["content"], api_key=api_key)
 
             response.append({"slide_number": i+1, "content": alignment})
+
+            if len(response) == 10:
+                break
 
         return response
     except Exception as e:

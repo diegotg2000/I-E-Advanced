@@ -10,19 +10,47 @@ from PIL import Image, ImageDraw, ImageFont
 
 encoding = tiktoken.encoding_for_model('gpt-4')
 
+SYSTEM_PROMPT = {}
+
+with open("gpt3_5-prompt.txt", "r") as file:
+    SYSTEM_PROMPT['gpt-3.5-turbo'] = file.read()
+
+with open("gpt4-prompt.txt", "r") as file:
+    SYSTEM_PROMPT['gpt-4-vision-preview'] = file.read()
+
 
 #### FUNCTIONS TO ALIGN CONTENT
-
-def align_text(transcript: str, text: str, *, client: OpenAI):
+    
+def get_summary(text: str, *, client: OpenAI):
     MODEL = "gpt-3.5-turbo"
-    SYSTEM_PROMPT = "You are a helpful assistant. The user will give you the content of a slide, and the transcription of a lecture concerning the slide. Please extract the information of the transcription that is relevant for that slide. Beware of not repeating information that is in the slide, the central goal is to add new information, the slide description is only there so you know what to extract from the transcription. If you think there isn't much to add, simply output an empty string. Otherwise, output a bullet point list and do not add any extra remarks."
+    response = client.chat.completions.create(
+        model=MODEL,
+        messages=[
+            {
+                "role": "system", 
+                "content": "You are a helpful assistant. Your role is to summarize the transcription of a lecture. Do not say hello or anything, just provide the answer."},
+            {
+                "role": "user", 
+                "content": text
+            }
+        ],
+        temperature=0,
+    )
+    summary = response.choices[0].message.content
+    return summary
 
-    data_str = f"Slides Content:\n{text}\nTranscription:\n{transcript}"
+def align_text(transcript: str, summary: str, previous_info: str, text: str, *, client: OpenAI):
+    MODEL = "gpt-3.5-turbo"
+    system_prompt = SYSTEM_PROMPT[MODEL]
+
+    data_str = f"Slides Content:\n{text}\nLecture Summary:\n{summary}\nInformation previously added to slides:\n{previous_info}\nTranscription:\n{transcript}"
+
+    print(data_str)
 
     response = client.chat.completions.create(
         model=MODEL,
         messages=[
-            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "system", "content": system_prompt},
             {"role": "user", "content": data_str},
         ],
         temperature=0,
@@ -31,18 +59,22 @@ def align_text(transcript: str, text: str, *, client: OpenAI):
     return response.choices[0].message.content
 
 
-def align_image(transcript: str, image: str, *, api_key: str):
+def align_image(transcript: str, summary: str, previous_info: str, image: str, *, api_key: str):
     MODEL = "gpt-4-vision-preview"
-    SYSTEM_PROMPT = "You are a helpful assistant. The user will give you the image of a slide as base64, and the transcription of a lecture concerning the slide. Please extract the information of the transcription that is relevant for that slide. Beware of not repeating information that is in the slide, the central goal is to add new information, the slide description is only there so you know what to extract from the transcription. If you think there isn't much to add, simply output an empty string. Otherwise, output a bullet point list and do not add any extra remarks."
+    system_prompt = SYSTEM_PROMPT[MODEL]
 
     headers = {"Content-Type": "application/json", "Authorization": f"Bearer {api_key}"}
+
+    data_str = f"Lecture summary:\n{summary}\nInformation previously added to the slides:\n{previous_info}\nTranscription: {transcript}"
+
+    print(data_str)
 
     payload = {
         "model": MODEL,
         "messages": [
             {
                 "role": "system",
-                "content": SYSTEM_PROMPT,
+                "content": system_prompt,
             },
             {
                 "role": "user",
@@ -51,7 +83,7 @@ def align_image(transcript: str, image: str, *, api_key: str):
                         "type": "image_url",
                         "image_url": {"url": f"data:image/jpeg;base64,{image}"},
                     },
-                    {"type": "text", "text": f"Transcription: {transcript}"},
+                    {"type": "text", "text": data_str},
                 ],
             },
         ],
