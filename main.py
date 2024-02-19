@@ -1,8 +1,12 @@
 from openai import OpenAI
 from fastapi import FastAPI, File, UploadFile
 from fastapi.responses import JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 from io import BytesIO
 import os
+
+# Your existing utility functions
 from utils import extract_pdf
 from utils import align_text, align_image
 from utils import count_tokens
@@ -10,6 +14,14 @@ from utils import split_transcript
 
 app = FastAPI()
 
+# Set up CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Allows all origins
+    allow_credentials=True,
+    allow_methods=["*"],  # Allows all methods
+    allow_headers=["*"],  # Allows all headers
+)
 with open("openai_key.txt", "r") as file:
     api_key = file.read()
 
@@ -18,7 +30,6 @@ client = OpenAI(api_key=api_key)
 @app.get("/")
 async def read_root():
     return {"Hello": "World"}
-
 
 @app.post("/process-audio/")
 def process_audio(audio: UploadFile = File(...)):
@@ -35,14 +46,13 @@ def process_audio(audio: UploadFile = File(...)):
             file=audio_file,
             language="en"
         )
-
+        print({"filename": audio.filename, "transcript": transcript.text})
         return {"filename": audio.filename, "transcript": transcript.text}
     except Exception as e:
         return JSONResponse(status_code=400, content={"message": f"An error occurred: {e}"})
     
     finally:
         os.remove(file_location)
-
 
 @app.post("/summarize")
 def summarize(text: str):
@@ -65,7 +75,6 @@ def summarize(text: str):
         return {"summary": summary}
     except Exception as e:
         return JSONResponse(status_code=400, content={"message": f"An error occurred: {e}"})
-    
 
 @app.post("/align-slides")
 async def align(transcript: str, slides: UploadFile = File(...)):
@@ -96,3 +105,4 @@ async def align(transcript: str, slides: UploadFile = File(...)):
     
     finally:
         os.remove(file_location)
+
