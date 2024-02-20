@@ -47,15 +47,10 @@ def process_audio(audio: UploadFile = File(...)):
             file=audio_file,
             language="en"
         )
-<<<<<<< Updated upstream
-        print({"filename": audio.filename, "transcript": transcript.text})
-        return {"filename": audio.filename, "transcript": transcript.text}
-=======
-        
+    
         # Summarizing the transcription
         summary_response = summarize(transcript.text)
         return {"summary": summary_response['summary']}
->>>>>>> Stashed changes
     except Exception as e:
         return JSONResponse(status_code=400, content={"message": f"An error occurred: {e}"})
     
@@ -113,4 +108,3 @@ async def align(transcript: str, slides: UploadFile = File(...)):
     
     finally:
         os.remove(file_location)
-
