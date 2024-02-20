@@ -125,7 +125,7 @@ class FunctionsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Select Function'),
+        title: Text('What do you need to do?'),
       ),
       body: Center(
         child: Column(
