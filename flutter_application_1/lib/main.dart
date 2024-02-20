@@ -10,7 +10,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Function App',
+      title: 'Sum&Note',
       theme: ThemeData(
         // Apply the custom color as the background color for all Scaffolds
         scaffoldBackgroundColor: customBackgroundColor,
@@ -51,7 +51,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('App Functions'),
+        title: Text('Home'),
       ),
       body: Center(
         child: Column(
@@ -141,7 +141,7 @@ class FunctionsScreen extends StatelessWidget {
               },
             ),
             FunctionButton(
-              buttonText: 'Sum',
+              buttonText: 'Summarization',
               onPressed: () {
                 Navigator.push(
                   context,
@@ -171,14 +171,14 @@ class SumAndNotesScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Sum and Notes'),
+        title: Text('Summarize and Notes'),
       ),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
             FunctionButton(
-              buttonText: 'Sum',
+              buttonText: 'Summarize',
               onPressed: () {
                 Navigator.push(
                   context,
