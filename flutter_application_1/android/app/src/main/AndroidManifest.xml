@@ -2,6 +2,7 @@
     <application
         android:label="SumNote"
         android:name="${applicationName}"
+        
         android:icon="@mipmap/ic_launcher">
         <activity
             android:name=".MainActivity"
