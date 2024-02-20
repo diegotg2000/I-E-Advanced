@@ -40,14 +40,22 @@ def process_audio(audio: UploadFile = File(...)):
             file_object.write(audio.file.read())
 
         audio_file = open(file_location, "rb")
-
+        
+        # Transcripting the audio
         transcript = client.audio.transcriptions.create(
             model="whisper-1", 
             file=audio_file,
             language="en"
         )
+<<<<<<< Updated upstream
         print({"filename": audio.filename, "transcript": transcript.text})
         return {"filename": audio.filename, "transcript": transcript.text}
+=======
+        
+        # Summarizing the transcription
+        summary_response = summarize(transcript.text)
+        return {"summary": summary_response['summary']}
+>>>>>>> Stashed changes
     except Exception as e:
         return JSONResponse(status_code=400, content={"message": f"An error occurred: {e}"})
     
