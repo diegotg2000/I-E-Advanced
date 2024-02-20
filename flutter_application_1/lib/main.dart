@@ -6,10 +6,19 @@ void main() {
 }
 
 class MyApp extends StatelessWidget {
+  final Color customBackgroundColor = Color.fromARGB(255, 255, 255, 255);
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'NoteAI',
+      title: 'Function App',
+      theme: ThemeData(
+        // Apply the custom color as the background color for all Scaffolds
+        scaffoldBackgroundColor: customBackgroundColor,
+        appBarTheme: AppBarTheme(
+          color:
+              customBackgroundColor, // Optional: also change the AppBar color to match
+        ),
+      ),
       home: HomeScreen(),
     );
   }
@@ -48,6 +57,16 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
+            Container(
+              height: 300, width: 300, // Set this height to fit your layout
+              decoration: BoxDecoration(
+                image: DecorationImage(
+                  image: AssetImage('assets/images/notAI3.png'),
+                  fit: BoxFit
+                      .cover, // Use BoxFit.cover to keep the image's aspect ratio.
+                ),
+              ),
+            ),
             FunctionButton(
               buttonText: 'Upload Record',
               onPressed: () async {
@@ -86,12 +105,12 @@ class _HomeScreenState extends State<HomeScreen> {
                       _navigateToSumAndNotesScreen();
                     }
                   },
-                  child: Text('Done'),
                   style: ElevatedButton.styleFrom(
-                    primary: Colors.blue,
-                    onPrimary: Colors.white,
+                    foregroundColor: Colors.white,
+                    backgroundColor: Color.fromARGB(255, 33, 183, 121),
                     padding: EdgeInsets.symmetric(horizontal: 50, vertical: 20),
                   ),
+                  child: Text('Go'),
                 ),
               ),
           ],
@@ -238,12 +257,12 @@ class FunctionButton extends StatelessWidget {
       padding: const EdgeInsets.all(8.0),
       child: ElevatedButton(
         onPressed: onPressed,
-        child: Text(buttonText),
         style: ElevatedButton.styleFrom(
-          primary: Color.fromARGB(255, 84, 98, 250), // Button color
-          onPrimary: const Color.fromARGB(255, 252, 252, 252), // Text color
+          foregroundColor: const Color.fromARGB(255, 252, 252, 252),
+          backgroundColor: Color.fromARGB(255, 33, 129, 183), // Text color
           padding: EdgeInsets.symmetric(horizontal: 50, vertical: 20),
         ),
+        child: Text(buttonText),
       ),
     );
   }
