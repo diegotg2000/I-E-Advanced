@@ -8,247 +8,125 @@ void main() {
 }
 
 class MyApp extends StatelessWidget {
-  final Color customBackgroundColor = Color.fromARGB(255, 255, 255, 255);
-
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Sum&Note',
-      theme: ThemeData(
-        scaffoldBackgroundColor: customBackgroundColor,
-        appBarTheme: AppBarTheme(
-          color: customBackgroundColor,
-        ),
-      ),
-      home: HomeScreen(),
+      title: 'Audio File Upload and Display Summary',
+      home: FileUploadScreen(),
     );
   }
 }
 
-class HomeScreen extends StatefulWidget {
+class FileUploadScreen extends StatefulWidget {
   @override
-  _HomeScreenState createState() => _HomeScreenState();
+  _FileUploadScreenState createState() => _FileUploadScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
-  bool _audioUploaded = false;
-  bool _slidesUploaded = false;
-  PlatformFile? _selectedAudioFile;
+class _FileUploadScreenState extends State<FileUploadScreen> {
+  String? _filePath;
 
-  void _navigateToFunctionsScreen() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => FunctionsScreen(audioFile: _selectedAudioFile)),
+  Future<void> pickFile() async {
+    FilePickerResult? result = await FilePicker.platform.pickFiles(
+      type: FileType.audio,
     );
-  }
 
-  void _navigateToSumAndNotesScreen() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => SumAndNotesScreen(audioFile: _selectedAudioFile)),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Home'),
-      ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            Container(
-              height: 300, width: 300,
-              decoration: BoxDecoration(
-                image: DecorationImage(
-                  image: AssetImage('assets/images/notAI3.png'),
-                  fit: BoxFit.cover,
-                ),
-              ),
-            ),
-            FunctionButton(
-              buttonText: 'Upload Record',
-              onPressed: () async {
-                FilePickerResult? result = await FilePicker.platform.pickFiles(
-                  type: FileType.audio,
-                );
-                if (result != null) {
-                  setState(() {
-                    _audioUploaded = true;
-                    _selectedAudioFile = result.files.first;
-                  });
-                }
-              },
-            ),
-            FunctionButton(
-              buttonText: 'Upload Slides',
-              onPressed: () async {
-                FilePickerResult? result = await FilePicker.platform.pickFiles(
-                  type: FileType.custom,
-                  allowedExtensions: ['pdf', 'ppt', 'pptx'],
-                );
-                if (result != null) {
-                  setState(() {
-                    _slidesUploaded = true;
-                  });
-                }
-              },
-            ),
-            if (_audioUploaded || _slidesUploaded)
-              Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: ElevatedButton(
-                  onPressed: () {
-                    if (_audioUploaded && _slidesUploaded) {
-                      _navigateToFunctionsScreen();
-                    } else {
-                      _navigateToSumAndNotesScreen();
-                    }
-                  },
-                  style: ElevatedButton.styleFrom(
-                    foregroundColor: Colors.white,
-                    backgroundColor: Color.fromARGB(255, 33, 183, 121),
-                    padding: EdgeInsets.symmetric(horizontal: 50, vertical: 20),
-                  ),
-                  child: Text('Go'),
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class FunctionsScreen extends StatelessWidget {
-  final PlatformFile? audioFile;
-
-  FunctionsScreen({Key? key, this.audioFile}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('What do you need to do?'),
-      ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            FunctionButton(
-              buttonText: 'Notes',
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => NotesScreen()),
-                );
-              },
-            ),
-            FunctionButton(
-              buttonText: 'Summarization',
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                      builder: (context) => SummarizationScreen(audioFile: audioFile)),
-                );
-              },
-            ),
-            FunctionButton(
-              buttonText: 'Align with Slides',
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => AlignmentScreen()),
-                );
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class SumAndNotesScreen extends StatelessWidget {
-  final PlatformFile? audioFile;
-
-  SumAndNotesScreen({Key? key, this.audioFile}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Summarize and Notes'),
-      ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            FunctionButton(
-              buttonText: 'Summarize',
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                      builder: (context) => SummarizationScreen(audioFile: audioFile)),
-                );
-              },
-            ),
-            FunctionButton(
-              buttonText: 'Notes',
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => NotesScreen()),
-                );
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class SummarizationScreen extends StatefulWidget {
-  final PlatformFile? audioFile;
-
-  SummarizationScreen({Key? key, this.audioFile}) : super(key: key);
-
-  @override
-  _SummarizationScreenState createState() => _SummarizationScreenState();
-}
-
-class _SummarizationScreenState extends State<SummarizationScreen> {
-  String _responseMessage = 'Processing...';
-  bool _isProcessing = true;
-
-  @override
-  void initState() {
-    super.initState();
-    if (widget.audioFile != null) {
-      processAudioFile();
-    } else {
+    if (result != null && result.files.single.path != null) {
       setState(() {
-        _responseMessage = 'No audio file selected.';
-        _isProcessing = false;
+        _filePath = result.files.single.path;
       });
     }
   }
 
-  Future<void> processAudioFile() async {
+  void navigateToSummarizeScreen() {
+    if (_filePath != null) {
+      Navigator.of(context).push(MaterialPageRoute(
+        builder: (context) => SummarizeScreen(filePath: _filePath!),
+      ));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Audio File Upload and Display Summary'),
+      ),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: <Widget>[
+            ElevatedButton(
+              onPressed: pickFile,
+              child: Text('Upload Audio'),
+            ),
+            SizedBox(height: 20),
+            if (_filePath != null)
+              ElevatedButton(
+                onPressed: navigateToSummarizeScreen,
+                child: Text('Go'),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class SummarizeScreen extends StatelessWidget {
+  final String filePath;
+
+  SummarizeScreen({required this.filePath});
+
+  void navigateToSummaryScreen(BuildContext context) {
+    Navigator.of(context).push(MaterialPageRoute(
+      builder: (context) => SummaryScreen(filePath: filePath),
+    ));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Prepare to Summarize'),
+      ),
+      body: Center(
+        child: ElevatedButton(
+          onPressed: () => navigateToSummaryScreen(context),
+          child: Text('Summarize!'),
+        ),
+      ),
+    );
+  }
+}
+
+class SummaryScreen extends StatefulWidget {
+  final String filePath;
+
+  SummaryScreen({required this.filePath});
+
+  @override
+  _SummaryScreenState createState() => _SummaryScreenState();
+}
+
+class _SummaryScreenState extends State<SummaryScreen> {
+  String _summary = '';
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    uploadAndProcessFile();
+  }
+
+  Future<void> uploadAndProcessFile() async {
     var request = http.MultipartRequest(
       'POST',
-      Uri.parse('http://localhost:5000/process-audio/'),
+      Uri.parse('http://10.116.6.142:5000/process-audio/'), // Replace with your actual backend URL
     );
 
-    request.files.add(http.MultipartFile.fromBytes(
+    request.files.add(await http.MultipartFile.fromPath(
       'audio',
-      widget.audioFile!.bytes!,
-      filename: widget.audioFile!.name,
+      widget.filePath,
     ));
 
     try {
@@ -257,21 +135,15 @@ class _SummarizationScreenState extends State<SummarizationScreen> {
 
       if (response.statusCode == 200) {
         var responseData = json.decode(response.body);
-        setState(() {
-          _responseMessage = responseData['summary'] ?? 'Transcription not available';
-        });
+        _summary = responseData['summary'] ?? 'No summary available';
       } else {
-        setState(() {
-          _responseMessage = 'Failed to process audio file. Status code: ${response.statusCode}';
-        });
+        _summary = 'Failed to upload file: ${response.statusCode}';
       }
     } catch (e) {
-      setState(() {
-        _responseMessage = 'Error: $e';
-      });
+      _summary = 'Error: $e';
     } finally {
       setState(() {
-        _isProcessing = false;
+        _isLoading = false;
       });
     }
   }
@@ -280,63 +152,12 @@ class _SummarizationScreenState extends State<SummarizationScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Summarization'),
+        title: Text('Audio Summary'),
       ),
       body: Center(
-        child: _isProcessing
-          ? CircularProgressIndicator()
-          : Text(_responseMessage),
-      ),
-    );
-  }
-}
-
-class NotesScreen extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Notes'),
-      ),
-      body: Center(
-        child: Text('Here you can find the notes'),
-      ),
-    );
-  }
-}
-
-class AlignmentScreen extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Alignment Example'),
-      ),
-      body: Center(
-        child: Text('Here the alignments'),
-      ),
-    );
-  }
-}
-
-class FunctionButton extends StatelessWidget {
-  final String buttonText;
-  final VoidCallback onPressed;
-
-  FunctionButton({required this.buttonText, required this.onPressed});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(8.0),
-      child: ElevatedButton(
-        onPressed: onPressed,
-        style: ElevatedButton.styleFrom(
-          foregroundColor: const Color.fromARGB(255, 252, 252, 252),
-          backgroundColor: Color.fromARGB(255, 33, 129, 183),
-          padding: EdgeInsets.symmetric(horizontal: 50, vertical: 20),
-        ),
-        child: Text(buttonText),
+        child: _isLoading
+            ? CircularProgressIndicator()
+            : Text(_summary),
       ),
     );
   }
