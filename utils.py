@@ -13,10 +13,10 @@ encoding = tiktoken.encoding_for_model('gpt-4')
 SYSTEM_PROMPT = {}
 
 with open("gpt3_5-prompt.txt", "r") as file:
-    SYSTEM_PROMPT['gpt-3.5-turbo'] = file.read()
+    SYSTEM_PROMPT['text_only'] = file.read()
 
 with open("gpt4-prompt.txt", "r") as file:
-    SYSTEM_PROMPT['gpt-4-vision-preview'] = file.read()
+    SYSTEM_PROMPT['image'] = file.read()
 
 
 #### FUNCTIONS TO ALIGN CONTENT
@@ -40,10 +40,10 @@ def get_summary(text: str, *, client: OpenAI):
     return summary
 
 def align_text(transcript: str, summary: str, previous_info: str, text: str, *, client: OpenAI):
-    MODEL = "gpt-3.5-turbo"
-    system_prompt = SYSTEM_PROMPT[MODEL]
+    MODEL = "gpt-4-turbo-preview"
+    system_prompt = SYSTEM_PROMPT['text_only']
 
-    data_str = f"Slides Content:\n{text}\nLecture Summary:\n{summary}\nInformation previously added to slides:\n{previous_info}\nTranscription:\n{transcript}"
+    data_str = f"Slides Content:\n{text}\n\nLecture Summary:\n{summary}\n\nInformation previously added to slides:\n{previous_info}\n\nTranscription:\n{transcript}"
 
     print(data_str)
 
@@ -61,11 +61,11 @@ def align_text(transcript: str, summary: str, previous_info: str, text: str, *, 
 
 def align_image(transcript: str, summary: str, previous_info: str, image: str, *, api_key: str):
     MODEL = "gpt-4-vision-preview"
-    system_prompt = SYSTEM_PROMPT[MODEL]
+    system_prompt = SYSTEM_PROMPT['image']
 
     headers = {"Content-Type": "application/json", "Authorization": f"Bearer {api_key}"}
 
-    data_str = f"Lecture summary:\n{summary}\nInformation previously added to the slides:\n{previous_info}\nTranscription: {transcript}"
+    data_str = f"Lecture summary:\n{summary}\n\nInformation previously added to the slides:\n{previous_info}\n\nTranscription: {transcript}"
 
     print(data_str)
 

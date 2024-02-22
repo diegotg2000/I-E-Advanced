@@ -1,6 +1,6 @@
 from openai import OpenAI
 from fastapi import FastAPI, File, UploadFile
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, FileResponse
 from io import BytesIO
 import os
 from utils import extract_pdf
@@ -8,6 +8,7 @@ from utils import align_text, align_image
 from utils import count_tokens
 from utils import split_transcript
 from utils import get_summary
+from utils import add_text_to_pdf_and_save
 
 app = FastAPI()
 
@@ -81,10 +82,15 @@ async def align(transcript: str, slides: UploadFile = File(...)):
 
             response.append({"slide_number": i+1, "content": alignment})
 
-            if len(response) == 10:
+            if len(response) >= 10:
                 break
 
-        return response
+        output_file = f"./uploaded_files/aligned_{slides.filename}"
+
+        add_text_to_pdf_and_save(file_location, output_file, response)
+
+        return FileResponse(output_file, media_type="application/pdf", headers={"Content-Disposition": f"attachment; filename=aligned_{slides.filename}"})
+    
     except Exception as e:
         return JSONResponse(status_code=400, content={"message": f"An error occurred: {e}"})
     
