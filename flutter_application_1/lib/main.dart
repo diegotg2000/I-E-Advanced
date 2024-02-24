@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:http/http.dart' as http;
-import 'dart:convert';
+import 'package:path_provider/path_provider.dart';
+import 'dart:io';
+import 'package:flutter_pdfview/flutter_pdfview.dart';
 
 void main() {
   runApp(MyApp());
@@ -11,7 +13,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Audio File Upload and Display Summary',
+      title: 'Audio and Slides File Upload',
       home: FileUploadScreen(),
     );
   }
@@ -23,24 +25,38 @@ class FileUploadScreen extends StatefulWidget {
 }
 
 class _FileUploadScreenState extends State<FileUploadScreen> {
-  String? _filePath;
+  String? _audioFilePath;
+  String? _pdfFilePath;
 
-  Future<void> pickFile() async {
+  Future<void> pickAudioFile() async {
     FilePickerResult? result = await FilePicker.platform.pickFiles(
       type: FileType.audio,
     );
 
     if (result != null && result.files.single.path != null) {
       setState(() {
-        _filePath = result.files.single.path;
+        _audioFilePath = result.files.single.path;
       });
     }
   }
 
-  void navigateToSummarizeScreen() {
-    if (_filePath != null) {
+  Future<void> pickPdfFile() async {
+    FilePickerResult? result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['pdf'],
+    );
+
+    if (result != null && result.files.single.path != null) {
+      setState(() {
+        _pdfFilePath = result.files.single.path;
+      });
+    }
+  }
+
+  void navigateToSummaryScreen() {
+    if (_audioFilePath != null && _pdfFilePath != null) {
       Navigator.of(context).push(MaterialPageRoute(
-        builder: (context) => SummarizeScreen(filePath: _filePath!),
+        builder: (context) => SummaryScreen(audioFilePath: _audioFilePath!, pdfFilePath: _pdfFilePath!),
       ));
     }
   }
@@ -49,22 +65,26 @@ class _FileUploadScreenState extends State<FileUploadScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Audio File Upload and Display Summary'),
+        title: Text('Audio and Slides File Upload'),
       ),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
             ElevatedButton(
-              onPressed: pickFile,
+              onPressed: pickAudioFile,
               child: Text('Upload Audio'),
             ),
             SizedBox(height: 20),
-            if (_filePath != null)
-              ElevatedButton(
-                onPressed: navigateToSummarizeScreen,
-                child: Text('Go'),
-              ),
+            ElevatedButton(
+              onPressed: pickPdfFile,
+              child: Text('Upload Slides'),
+            ),
+            SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: navigateToSummaryScreen,
+              child: Text('Process and Align'),
+            ),
           ],
         ),
       ),
@@ -72,61 +92,39 @@ class _FileUploadScreenState extends State<FileUploadScreen> {
   }
 }
 
-class SummarizeScreen extends StatelessWidget {
-  final String filePath;
-
-  SummarizeScreen({required this.filePath});
-
-  void navigateToSummaryScreen(BuildContext context) {
-    Navigator.of(context).push(MaterialPageRoute(
-      builder: (context) => SummaryScreen(filePath: filePath),
-    ));
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Prepare to Summarize'),
-      ),
-      body: Center(
-        child: ElevatedButton(
-          onPressed: () => navigateToSummaryScreen(context),
-          child: Text('Summarize!'),
-        ),
-      ),
-    );
-  }
-}
-
 class SummaryScreen extends StatefulWidget {
-  final String filePath;
+  final String audioFilePath;
+  final String pdfFilePath;
 
-  SummaryScreen({required this.filePath});
+  SummaryScreen({required this.audioFilePath, required this.pdfFilePath});
 
   @override
   _SummaryScreenState createState() => _SummaryScreenState();
 }
 
 class _SummaryScreenState extends State<SummaryScreen> {
-  String _summary = '';
   bool _isLoading = true;
+  String? _localFilePath;
 
   @override
   void initState() {
     super.initState();
-    uploadAndProcessFile();
+    uploadAndProcessFiles();
   }
 
-  Future<void> uploadAndProcessFile() async {
+  Future<void> uploadAndProcessFiles() async {
     var request = http.MultipartRequest(
       'POST',
-      Uri.parse('http://10.116.6.142:5000/process-audio/'), // Replace with your actual backend URL
+      Uri.parse('http://10.116.6.142:5000/align-slides'), // Update this with your backend URL
     );
 
     request.files.add(await http.MultipartFile.fromPath(
       'audio',
-      widget.filePath,
+      widget.audioFilePath,
+    ));
+    request.files.add(await http.MultipartFile.fromPath(
+      'slides',
+      widget.pdfFilePath,
     ));
 
     try {
@@ -134,14 +132,21 @@ class _SummaryScreenState extends State<SummaryScreen> {
       var response = await http.Response.fromStream(streamedResponse);
 
       if (response.statusCode == 200) {
-        var responseData = json.decode(response.body);
-        _summary = responseData['summary'] ?? 'No summary available';
+        var dir = await getApplicationDocumentsDirectory();
+        File file = File("${dir.path}/result.pdf");
+        await file.writeAsBytes(response.bodyBytes);
+        setState(() {
+          _localFilePath = file.path;
+          _isLoading = false;
+        });
       } else {
-        _summary = 'Failed to upload file: ${response.statusCode}';
+        print('Failed to process files: ${response.statusCode}');
+        setState(() {
+          _isLoading = false;
+        });
       }
     } catch (e) {
-      _summary = 'Error: $e';
-    } finally {
+      print('Error: $e');
       setState(() {
         _isLoading = false;
       });
@@ -152,13 +157,13 @@ class _SummaryScreenState extends State<SummaryScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Audio Summary'),
+        title: Text('Processed File'),
       ),
-      body: Center(
-        child: _isLoading
-            ? CircularProgressIndicator()
-            : Text(_summary),
-      ),
+      body: _isLoading
+          ? Center(child: CircularProgressIndicator())
+          : _localFilePath != null
+              ? PDFView(filePath: _localFilePath)
+              : Center(child: Text('No file to display')),
     );
   }
 }

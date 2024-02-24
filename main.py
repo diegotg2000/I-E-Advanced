@@ -1,6 +1,6 @@
 from openai import OpenAI
 from fastapi import FastAPI, File, UploadFile
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from io import BytesIO
@@ -11,6 +11,9 @@ from utils import extract_pdf
 from utils import align_text, align_image
 from utils import count_tokens
 from utils import split_transcript
+from utils import get_summary
+from utils import add_text_to_pdf_and_save
+
 
 app = FastAPI()
 
@@ -79,32 +82,60 @@ def summarize(text: str):
     except Exception as e:
         return JSONResponse(status_code=400, content={"message": f"An error occurred: {e}"})
 
+
 @app.post("/align-slides")
-async def align(transcript: str, slides: UploadFile = File(...)):
+async def align(audio: UploadFile = File(...), slides: UploadFile = File(...)):
+    audio_file_location = f"./uploaded_files/{audio.filename}"
+    slides_file_location = f"./uploaded_files/{slides.filename}"
+
     try:
-        # Save the uploaded slides file to a directory (e.g., './uploaded_files/')
-        file_location = f"./uploaded_files/{slides.filename}"
-        with open(file_location, "wb") as buffer:
-            buffer.write(await slides.read())
+        with open(audio_file_location, "wb+") as audio_file_object:
+            # Use await with async read()
+            file_data = await audio.read()
+            audio_file_object.write(file_data)
 
-        data = extract_pdf(file_location)
+        # Process the audio file to get the transcript
+        with open(audio_file_location, "rb") as audio_file:
+            transcript_response = client.audio.transcriptions.create(
+                model="whisper-1", 
+                file=audio_file,
+                language="en"
+            )
+        transcript = transcript_response.text
 
+        # Save the uploaded slides file
+        with open(slides_file_location, "wb") as slides_file_object:
+            slides_data = await slides.read()
+            slides_file_object.write(slides_data)
+
+        # Extract data from the slides and align them with the transcript
+        data = extract_pdf(slides_file_location)
         transcript_list = split_transcript(transcript, n_chunks=len(data))
 
         response = []
-
         for i, (content_dict, slide_transcript) in enumerate(zip(data, transcript_list)):
+            previous_info = "\n".join([d['content'] for d in response[-3:]])
+
             if content_dict["type"] == "text":
-                alignment = align_text(slide_transcript, content_dict["content"], client=client)
-
+                alignment = align_text(slide_transcript, transcript, previous_info, content_dict["content"], client=client)
             elif content_dict["type"] == "image":
-                alignment = align_image(slide_transcript, content_dict["content"], api_key=api_key)
+                alignment = align_image(slide_transcript, transcript, previous_info, content_dict["content"], api_key=api_key)
 
-            response.append({"slide_number": i+1, "content": alignment})
+            response.append({"slide_number": i + 1, "content": alignment})
 
-        return response
+        output_file = f"./uploaded_files/aligned_{slides.filename}"
+        add_text_to_pdf_and_save(slides_file_location, output_file, response)
+
+        return FileResponse(output_file, media_type="application/pdf", headers={"Content-Disposition": f"attachment; filename=aligned_{slides.filename}"})
+
     except Exception as e:
+        # Log the exception for debugging
+        print(f"An error occurred: {e}")
         return JSONResponse(status_code=400, content={"message": f"An error occurred: {e}"})
-    
+
     finally:
-        os.remove(file_location)
+        # Clean up the uploaded files
+        if os.path.exists(audio_file_location):
+            os.remove(audio_file_location)
+        if os.path.exists(slides_file_location):
+            os.remove(slides_file_location)

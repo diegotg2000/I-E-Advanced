@@ -3,6 +3,8 @@ FROM tiangolo/uvicorn-gunicorn-fastapi:python3.8
 WORKDIR /code
 COPY requirements.txt requirements.txt
 COPY openai_key.txt openai_key.txt
+COPY gpt3_5-prompt.txt gpt3_5-prompt.txt
+COPY gpt4-prompt.txt gpt4-prompt.txt
 
 RUN pip install --upgrade pip
 RUN pip install Pillow
